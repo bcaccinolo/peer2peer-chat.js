@@ -2,18 +2,12 @@ const express = require('express');
 const app = express();
 const WebSocket = require('ws');
 
-// command line arguments
-process.argv.forEach(function (val, index, array) {
-  console.log(index + ': ' + val);
-});
-
 // Connection ports
 const ws_server_port = process.argv[2];
 const web_server_port = Number(ws_server_port) + 1;
 
 // P2P class
 class P2P {
-
   constructor(port) {
     this.port = port;
     this.sockets = [];
@@ -24,71 +18,10 @@ class P2P {
     console.log("P2P: server listening on port ", this.port);
 
     this.server.on('connection', (ws) => {
-      console.log('connection');
       ws.on('message', (data) => {
         this.listenMessage(data, ws);
       })
     })
-  }
-
-  createMessage(json) {
-    return JSON.stringify(json);
-  }
-
-  sendMessage(message) {
-    this.sockets.forEach((socket) => {
-      socket.send(this.createMessage({type: 'message', data: message}));
-    })
-  }
-
-  addSocket(ws) {
-    console.log('### Adding new socket in the list');
-    ws.send(this.createMessage({type: 'message', data: "From " + ws_server_port + " ok i added you"}));
-    this.sockets.push(ws);
-  }
-
-  listenMessage(message, ws) {
-
-    console.log('\n**********************************************************');
-    console.log('in listen message with data', message);
-
-    let json = JSON.parse(message);
-
-    // New Peer Broadcast
-    if (json.type === 'newPeerBroadcast') {
-
-      this.sockets.forEach((socket) => {
-        socket.send(this.createMessage({type: 'newPeer', port: json.port}));
-      })
-
-      console.log('New peer node added ', json.port);
-      this.addSocket(ws);
-
-      ws.send(this.createMessage({type: 'addMe', port: json.port}));
-    }
-
-    // Add New Peer request
-    if (json.type === 'newPeer') {
-
-      let url = "ws://localhost:"+json.port;
-      console.log(url);
-
-      let ws = new WebSocket(url);
-      ws.on('open',  () => {
-        console.log('connection new peer simple');
-        ws.send(this.createMessage({type: 'addMe', port: json.port}));
-        ws.on('message', function(data){
-          console.log(data);
-        })
-        this.addSocket(ws);
-      })
-    }
-
-    // Add the peer
-    if (json.type === 'addMe') {
-      this.addSocket(ws);
-    }
-
   }
 
   newConnection(port) {
@@ -105,6 +38,63 @@ class P2P {
     ws.on('close', () => {
       console.log('connection closed');
     })
+  }
+
+  addSocket(ws) {
+    ws.send(this.createMessage({type: 'message', data: "ok i added you"}));
+    this.sockets.push(ws);
+  }
+
+  createMessage(json) {
+    json.from = this.port;
+    console.log("\n---------------------------------------------------------");
+    console.log("Sending: ", json);
+    return JSON.stringify(json);
+  }
+
+  sendMessage(message) {
+    this.sockets.forEach((socket) => {
+      socket.send(this.createMessage({type: 'message', data: message}));
+    })
+  }
+
+  listenMessage(message, ws) {
+    console.log('\n**********************************************************');
+    console.log('Received message: ', message);
+
+    let json = JSON.parse(message);
+
+    // New Peer Broadcast
+    if (json.type === 'newPeerBroadcast') {
+      this.sockets.forEach((socket) => {
+        socket.send(this.createMessage({type: 'newPeer', port: json.port}));
+      })
+      this.addSocket(ws);
+      ws.send(this.createMessage({type: 'addMe', port: json.port}));
+    }
+
+    // Add New Peer without broadcasting
+    if (json.type === 'newPeer') {
+      let url = "ws://localhost:"+json.port;
+      let ws = new WebSocket(url);
+      ws.on('open',  () => {
+        ws.send(this.createMessage({type: 'addMe', port: json.port}));
+        ws.on('message', (data) => {
+          this.listenMessage(data);
+        })
+        this.addSocket(ws);
+      })
+    }
+
+    // Add the peer
+    if (json.type === 'addMe') {
+      this.addSocket(ws);
+    }
+
+    // Received a message
+    if (json.type === 'message') {
+      console.log("Message from: " + json.from + " - " + json.data);
+    }
   }
 }
 // End P2P class

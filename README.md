@@ -16,6 +16,7 @@ https://github.com/websockets/ws/blob/master/doc/ws.md
 - DONE send a message
 - DONE when the client connects, send its port
 - as a client, when I receive a message 'newPeer', I send a request to it.
+
 -> you can not add doublons
 
 - switch functions to fat arrow
