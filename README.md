@@ -14,6 +14,6 @@ https://github.com/websockets/ws/blob/master/doc/ws.md
 - DONE when the client connects, send its port
 - DONE as a client, when I receive a message 'newPeer', I send a request to it.
 - DONE switch functions to fat arrow
--> you can not add twice a client
+- > you can not add twice a client
 
 
