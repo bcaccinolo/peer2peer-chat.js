@@ -34,15 +34,20 @@ class P2P {
         this.listenMessage(msg, ws);
       })
     });
-
-    ws.on('close', () => {
-      console.log('connection closed');
-    })
   }
 
   addSocket(ws) {
     ws.send(this.createMessage({type: 'message', data: "ok i added you"}));
+    ws.on('close', () => {
+      console.log('connection closed');
+      this.removeSocket(ws);
+    })
     this.sockets.push(ws);
+  }
+
+  removeSocket(ws) {
+    const index = this.sockets.indexOf(ws);
+    this.sockets.splice(index, 1);
   }
 
   createMessage(json) {
